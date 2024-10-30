@@ -25,7 +25,7 @@ from multiprocessing import Pool
 #----====SPOTIFY CREDENTIALS====----#
 # Create a .env file and edit it to have these variables:
 # SP_CLIENT_ID ; SP_CLIENT_SECRET
-# Assign them your spotify's ID and Secret respectively to use spotify support
+# Assign them your spotify's ID and Secret respectively to enable spotify support
 
 load_dotenv()
 CLIENT_ID = os.getenv("SP_CLIENT_ID")
@@ -409,7 +409,7 @@ def download_song(song:str) -> None:
             songs_dict[song].rename_totitle()
             songs_dict[song].move_to_directory()
             songs_dict[song].add_metadata()
-            time.sleep(10) # Avoid ratelimit
+            time.sleep(30) # Avoid ratelimit
         except Exception as e:
             print(f"[?] [DOWNLOADEXC] Exception downloading {song}. If nothing is missing and song is complete, ignore.\n#EXCEPTION> {e}")
 
