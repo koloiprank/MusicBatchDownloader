@@ -9,6 +9,7 @@ from PIL import Image
 #MUSIC DOWNLOAD
 from yt_dlp import YoutubeDL
 from youtube_search import YoutubeSearch
+from pytube import Playlist
 import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
 #OS
@@ -16,11 +17,16 @@ import os
 import shutil
 from dotenv import load_dotenv
 import time
+import re
 from multiprocessing import Pool
 
 
 
 #----====SPOTIFY CREDENTIALS====----#
+# Create a .env file and edit it to have these variables:
+# SP_CLIENT_ID ; SP_CLIENT_SECRET
+# Assign them your spotify's ID and Secret respectively to use spotify support
+
 load_dotenv()
 CLIENT_ID = os.getenv("SP_CLIENT_ID")
 CLIENT_SECRET = os.getenv("SP_CLIENT_SECRET")
@@ -32,13 +38,14 @@ if CLIENT_ID and CLIENT_SECRET:
     
     def get_spotify_uri(link : str) -> str:
         return link.split("/")[-1].split("?")[0]
-    def get_spotify_info(query : str) -> str | list[str | list[str]]:
+    def get_spotify_info(query : str) -> str | list[str]:
         if "track" in query:
             uri = get_spotify_uri(query)
             return f"{SP.track(uri)['name']} {SP.track(uri)['artists'][0]['name']}"
+        
         elif "playlist" in query:
             uri = get_spotify_uri(query)
-            return [SP.playlist(uri)['name'] ,[f"{song['track']['name']} {song['track']['artists'][0]['name']}" for song in SP.playlist_tracks(uri)["items"]]]
+            return [f"{song['track']['name']} {song['track']['artists'][0]['name']}" for song in SP.playlist_tracks(uri)["items"]]
 
 
 
@@ -289,6 +296,7 @@ class Song():
 
 
 #-----=====FILE STRUCTURE=====-----#
+#TODO Add exceptions to unvalid file/album/song structure
 # Structure Assemblers
 def read_lines(textfile:str) -> list[str]:
     with open(textfile, "r") as fl:
@@ -346,22 +354,42 @@ def assign_songs(lines:list[str], structure:list[str]) -> dict[str:Song]:
         # Enter album folder
         if "A" in structure[idx]:
             # Assign album name
-            if "A" in structure[idx]  and (idx == 0 or "A" not in structure[idx-1]):
+            if "A" in structure[idx] and (idx == 0 or "A" not in structure[idx-1]):
                 album = lines[idx][3:-1]
         else:
             album = None
         # Enter cover
         if "C" in structure[idx]:
             # Assign cover
-            if "C" in structure[idx]  and (idx == 0 or "C" not in structure[idx-1]):
+            if "C" in structure[idx] and (idx == 0 or "C" not in structure[idx-1]):
                 cover = lines[idx][3:-1]
         else:
             cover = None        
         
         # Assign song
         if "S" in structure[idx]:
-            songs[lines[idx]] = Song(title=lines[idx], album=album, folder=folder, cover=cover)
+            # Playlist append
+            if "https" in lines[idx] and "playlist" in lines[idx]:
+                toappend = {}
+                # Spotify
+                if "open.spotify" in lines[idx]:
+                    playlist_songs = get_spotify_info(query=lines[idx])
+                    
+                    for song in playlist_songs:
+                        toappend[song] = Song(title=song, album=album, folder=folder, cover=cover)
+                # Youtube
+                elif "youtu.be" in lines[idx] or "youtube.com" in lines[idx]:
+                    playlist = Playlist(song)
+                    playlist._video_regex = re.compile(r"\"url\":\"(/watch\?v=[\w-]*)") # Youtube changed regex of video links
+                    playlist_urls = playlist.video_urls
+                    
+                    if playlist_urls:
+                        for url in playlist_urls:
+                            toappend[url] = Song(title=url, album=album, folder=folder, cover=cover)
+            else:
+                songs[lines[idx]] = Song(title=lines[idx], album=album, folder=folder, cover=cover)
     # Return
+    songs = songs | toappend if toappend else songs
     return songs
 
 # Song download process
@@ -381,7 +409,7 @@ def download_song(song:str) -> None:
             songs_dict[song].rename_totitle()
             songs_dict[song].move_to_directory()
             songs_dict[song].add_metadata()
-            time.sleep(5) # Avoid ratelimit
+            time.sleep(10) # Avoid ratelimit
         except Exception as e:
             print(f"[?] [DOWNLOADEXC] Exception downloading {song}. If nothing is missing and song is complete, ignore.\n#EXCEPTION> {e}")
 
@@ -390,7 +418,7 @@ def download_song(song:str) -> None:
 #--------=======MAIN========--------#
 # Variables
 #TODO Use main function to assign variables to global
-lines = read_lines("songs.txt")
+lines = read_lines("MusicList.txt")
 structure = assemble_structure(lines)
 songs_dict = assign_songs(lines=lines, structure=structure)
 processed = []
