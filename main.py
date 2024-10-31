@@ -423,18 +423,15 @@ def download_song(song_tuple:str) -> None:
 def main():
     # Get music list filename
     while True:
-        filepath = input("[Filename.txt | Path to file.txt] File containing songs to download. Leave empty to use default (MusicList.txt): ")
+        filepath = input("[Filename | Path to file] Plain text file containing songs to download. Leave empty to use default (MusicList.txt): ")
         if not filepath:
             filepath = "./MusicList.txt"
             break
-        
-        if ".txt" not in filepath:
-            filepath += ".txt"
-        
+
         if os.path.exists(filepath):
             break
         else:
-            print("File not found. Make sure your file is .txt and that the Local Filename / Path is correct.")
+            print("File not found. Make sure your Local Filename / Path is correct.")
     
     # Create structure
     lines = read_lines(filepath)
