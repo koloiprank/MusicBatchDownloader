@@ -2,10 +2,10 @@
 mutagen==1.47.0
 pydub==0.25.1
 #Image covers packages
-requests==2.31.0
+requests
 Pillow==10.1.0
 #Music download packages
-yt-dlp==2024.5.27
+yt-dlp
 youtube-search==2.1.2
 pytube @ git+https://github.com/pishiko/pytube.git@42a7d8322dd7749a9e950baf6860d115bbeaedfc
 spotipy==2.24.0
