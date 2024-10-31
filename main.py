@@ -296,7 +296,6 @@ class Song():
 
 
 #-----=====FILE STRUCTURE=====-----#
-#TODO Add exceptions to unvalid file/album/song structure
 # Structure Assemblers
 def read_lines(textfile:str) -> list[str]:
     with open(textfile, "r") as fl:
@@ -312,12 +311,18 @@ def line_type(line:str, linetype:str) -> str:
     
     linetype = list(linetype)
     # Folder
+    if "F" in linetype and is_structure and line[1] == "F":
+        raise SyntaxError(f"Double folder stacked on line ( {line} )")
     linetype += "F" if is_structure and line[1] == "F" else ""
     linetype.remove("F") if line == "[!F]" and "F" in linetype else None
     # Album
+    if "A" in linetype and is_structure and line[1] == "A":
+        raise SyntaxError(f"Double album stacked on line ( {line} )")
     linetype += "A" if is_structure and line[1] == "A" else ""
     linetype.remove("A") if line == "[!A]" and "A" in linetype else None
     # Cover
+    if "C" in linetype and is_structure and line[1] == "C":
+        raise SyntaxError(f"Double cover stacked on line ( {line} )")
     linetype += "C" if is_structure and line[1] == "C" else ""
     linetype.remove("C") if line == "[!C]" and "C" in linetype else None
     # Song
@@ -334,11 +339,12 @@ def assemble_structure(lines:list) -> list[str]:
     for line in lines:
         line_composition = line_type(line, line_composition)
         structure.append(line_composition)
-    
+
     # Return
     return structure
 def assign_songs(lines:list[str], structure:list[str]) -> dict[str:Song]:
     songs = {}
+    toappend = {}
     # Assign songs
     for idx in range(len(lines)):
         # Enter Empty
@@ -369,7 +375,6 @@ def assign_songs(lines:list[str], structure:list[str]) -> dict[str:Song]:
         # Assign song
         if "S" in structure[idx]:
             # Playlist append
-            toappend = {}
             if "https" in lines[idx] and "playlist" in lines[idx]:
                 # Spotify
                 if "open.spotify" in lines[idx]:
@@ -417,14 +422,17 @@ def download_song(song:str) -> None:
 
 #--------=======MAIN========--------#
 # Variables
-#TODO Use main function to assign variables to global
-lines = read_lines("MusicList.txt")
-structure = assemble_structure(lines)
-songs_dict = assign_songs(lines=lines, structure=structure)
 processed = []
+songs_dict = {}
 
 # Main function
 def main():
+    global songs_dict
+    lines = read_lines("MusicList.txt")
+    structure = assemble_structure(lines)
+    songs_dict = assign_songs(lines=lines, structure=structure)
+    print(songs_dict)
+    
     #Download songs with pool
     songs = [song for song in songs_dict]
     with Pool() as pool:
