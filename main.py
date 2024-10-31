@@ -102,16 +102,16 @@ class Song():
                     'format': 'bestaudio/',
                     'noplaylist': True,
                     'nocheckcertificate': True,
-                    'no_warnings': True,
                     'default_search': 'auto',
                     'source_address': '0.0.0.0',
                     'quiet': True,
                     'filter': 'audioonly',
-                    'outtmpl': f'{self.path}{self.filename}.{"%(ext)s"}'
+                    'outtmpl': f'{self.path}{self.filename}.%(ext)s',
+                    'sleep_interval': 30
                 }
             if "open.spotify" in self.title:
                 track = get_spotify_info(self.title)
-                info = YoutubeSearch(track, max_results=1).to_dict()[0]
+                info = YoutubeSearch(track, max_results=1).to_dict()[0] 
                 with YoutubeDL(options) as ydl:
                     ydl.extract_info("ytsearch:%s" % info["title"])
             if "youtube.com" in self.title or "youtu.be" in self.title:
@@ -131,9 +131,9 @@ class Song():
             self.title = info["title"]
             self.artist = info["channel"]
             self.album = self.album or info["title"]
-            self.cover = self.cover or info["thumbnail"] if "thumbnail" in info else info["thumbnails"][0]
+            self.cover = self.cover or (info["thumbnail"] if "thumbnail" in info else info["thumbnails"][0])
             self.ext = get_fileext_fromname(self.path, self.filename)[1].replace(".", "")
-        except Exception:
+        except Exception as e:
             print(f"[-][DOWNLOAD-MTD] [{self.title}] failed metadata addition\n#EXCEPTION: {e}")
 
     def transcode_song(self, format_to:str = "flac") -> None:
@@ -227,7 +227,6 @@ class Song():
                 except Exception as e:
                     print(f"[-] [METADATAIMG] Could not add cover to song {self.filename}>>>\n{e}")
 
-                
             # FLAC
             elif self.ext == "flac":
                 songf = FLAC(f"{self.path}{self.filename}.{self.ext}")
@@ -275,6 +274,7 @@ class Song():
                         with Image.open(f"{self.path}cover.png") as imagePil:
                             img.width, img.height = imagePil.size
                             img.depth = 24
+                        
                         songf.add_picture(img)
                     
                     # Not valid cover
@@ -369,8 +369,8 @@ def assign_songs(lines:list[str], structure:list[str]) -> dict[str:Song]:
         # Assign song
         if "S" in structure[idx]:
             # Playlist append
+            toappend = {}
             if "https" in lines[idx] and "playlist" in lines[idx]:
-                toappend = {}
                 # Spotify
                 if "open.spotify" in lines[idx]:
                     playlist_songs = get_spotify_info(query=lines[idx])
@@ -389,7 +389,8 @@ def assign_songs(lines:list[str], structure:list[str]) -> dict[str:Song]:
             else:
                 songs[lines[idx]] = Song(title=lines[idx], album=album, folder=folder, cover=cover)
     # Return
-    songs = songs | toappend if toappend else songs
+    if toappend != {}:
+        songs = songs | toappend
     return songs
 
 # Song download process
@@ -409,9 +410,8 @@ def download_song(song:str) -> None:
             songs_dict[song].rename_totitle()
             songs_dict[song].move_to_directory()
             songs_dict[song].add_metadata()
-            time.sleep(30) # Avoid ratelimit
         except Exception as e:
-            print(f"[?] [DOWNLOADEXC] Exception downloading {song}. If nothing is missing and song is complete, ignore.\n#EXCEPTION> {e}")
+            print(f"[?] [DOWNLOADEXC] Exception downloading {song}\n#EXCEPTION> {e}")
 
 
 
@@ -428,7 +428,7 @@ def main():
     #Download songs with pool
     songs = [song for song in songs_dict]
     with Pool() as pool:
-        pool.map(download_song, songs)
+        pool.map(download_song, songs, chunksize=6)
         
 if __name__=="__main__":
     main()
