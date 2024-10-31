@@ -74,7 +74,7 @@ def crop_image(image:Image) -> Image:
 
     return image
 
-# Classes
+# Song Class
 class Song():
     """_summary_
     Song class representing a song and it's metadata.\n
@@ -399,42 +399,50 @@ def assign_songs(lines:list[str], structure:list[str]) -> dict[str:Song]:
     return songs
 
 # Song download process
-def download_song(song:str) -> None:
-    # Global vars
-    global processed
-    global songs_dict
+def download_song(song_tuple:str) -> None:
+    # Main vars
+    song = song_tuple[0]
+    songs_dict = song_tuple[1]
+    
     # Process songs
-    if song not in processed:
-        try:
-            # Add song to processed to avoid multiple instances working on same song
-            processed.append(song)
-            print(f"[+][SONG] Working on: {song}")
-            # Download and treat song
-            songs_dict[song].download_song()
-            songs_dict[song].transcode_song()
-            songs_dict[song].rename_totitle()
-            songs_dict[song].move_to_directory()
-            songs_dict[song].add_metadata()
-        except Exception as e:
-            print(f"[?] [DOWNLOADEXC] Exception downloading {song}\n#EXCEPTION> {e}")
+    try:
+        print(f"[+][SONG] Working on: {song}")
+        # Download and treat song
+        songs_dict[song].download_song()
+        songs_dict[song].transcode_song()
+        songs_dict[song].rename_totitle()
+        songs_dict[song].move_to_directory()
+        songs_dict[song].add_metadata()
+    except Exception as e:
+        print(f"[?] [DOWNLOADEXC] Exception downloading {song}\n#EXCEPTION> {e}")
 
 
 
 #--------=======MAIN========--------#
-# Variables
-processed = []
-songs_dict = {}
-
 # Main function
 def main():
-    global songs_dict
-    lines = read_lines("MusicList.txt")
+    # Get music list filename
+    while True:
+        filepath = input("[Filename.txt | Path to file.txt] File containing songs to download. Leave empty to use default (MusicList.txt): ")
+        if not filepath:
+            filepath = "./MusicList.txt"
+            break
+        
+        if ".txt" not in filepath:
+            filepath += ".txt"
+        
+        if os.path.exists(filepath):
+            break
+        else:
+            print("File not found. Make sure your file is .txt and that the Local Filename / Path is correct.")
+    
+    # Create structure
+    lines = read_lines(filepath)
     structure = assemble_structure(lines)
     songs_dict = assign_songs(lines=lines, structure=structure)
-    print(songs_dict)
     
     #Download songs with pool
-    songs = [song for song in songs_dict]
+    songs = [(song, songs_dict) for song in songs_dict]
     with Pool() as pool:
         pool.map(download_song, songs, chunksize=6)
         
