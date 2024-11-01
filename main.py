@@ -121,8 +121,10 @@ class Song():
                 info = YoutubeSearch(self.title, max_results=1).to_dict()[0]
                 with YoutubeDL(options) as ydl:
                     ydl.extract_info("ytsearch:%s" % info["title"]) 
+        except IndexError as e:
+            print(f"[?][DOWNLOAD] [{self.title}] Download exception (Ignore)\n#EXCEPTION: {e}")
         except Exception as e:
-            print(f"[-][DOWNLOAD] [{self.title}] failed download\n#EXCEPTION: {e}")
+            print(f"[-][DOWNLOAD] [{self.title}] Download exception\n#EXCEPTION: {e}")
         
         # Set song metadata
         try:
