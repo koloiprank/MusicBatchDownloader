@@ -441,7 +441,7 @@ def main():
     #Download songs with pool
     songs = [(song, songs_dict) for song in songs_dict]
     with Pool() as pool:
-        pool.map(download_song, songs, chunksize=6)
+        pool.map(download_song, songs)
         
 if __name__=="__main__":
     main()
