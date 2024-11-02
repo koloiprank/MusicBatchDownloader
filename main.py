@@ -16,7 +16,6 @@ from spotipy.oauth2 import SpotifyClientCredentials
 import os
 import shutil
 from dotenv import load_dotenv
-import time
 import re
 from multiprocessing import Pool
 
@@ -107,33 +106,32 @@ class Song():
                     'quiet': True,
                     'filter': 'audioonly',
                     'outtmpl': f'{self.path}{self.filename}.%(ext)s',
-                    'sleep_interval': 30
+                    'sleep_interval': 20,
+                    'max_sleep_interval':35
                 }
             if "open.spotify" in self.title:
                 track = get_spotify_info(self.title)
-                info = YoutubeSearch(track, max_results=1).to_dict()[0] 
+                info = YoutubeSearch(track, max_results=1).to_dict()[0]
                 with YoutubeDL(options) as ydl:
-                    ydl.extract_info("ytsearch:%s" % info["title"])
-            if "youtube.com" in self.title or "youtu.be" in self.title:
+                    ydl.extract_info(f"https://youtube.com{info["url_suffix"]}")
+            elif "youtube.com" in self.title or "youtu.be" in self.title:
                 with YoutubeDL(options) as ydl:
                     info = ydl.extract_info(self.title)
             else:
                 info = YoutubeSearch(self.title, max_results=1).to_dict()[0]
                 with YoutubeDL(options) as ydl:
-                    ydl.extract_info("ytsearch:%s" % info["title"]) 
-        except IndexError as e:
-            print(f"[?][DOWNLOAD] [{self.title}] Download exception (Ignore)\n#EXCEPTION: {e}")
+                    ydl.extract_info(f"https://youtube.com{info["url_suffix"]}") 
         except Exception as e:
             print(f"[-][DOWNLOAD] [{self.title}] Download exception\n#EXCEPTION: {e}")
         
         # Set song metadata
         try:
-            print(f"[+][DOWNLOAD-MTD] Setting metadata for [{self.title}]")
+            print(f"[+][DOWNLOAD-MTD] Setting metadata for [{self.title}][{self.filename}]")
             
             self.title = info["title"]
             self.artist = info["channel"]
             self.album = self.album or info["title"]
-            self.cover = self.cover or (info["thumbnail"] if "thumbnail" in info else info["thumbnails"][0])
+            self.cover = self.cover or (info["thumbnails"][0] if "thumbnails" in info else info["thumbnail"])
             self.ext = get_fileext_fromname(self.path, self.filename)[1].replace(".", "")
         except Exception as e:
             print(f"[-][DOWNLOAD-MTD] [{self.title}] failed metadata addition\n#EXCEPTION: {e}")
@@ -289,7 +287,7 @@ class Song():
             songf["title"] = self.title
             songf["artist"] = self.artist
             songf["album"] = self.album
-            songf["albumartist"] = self.artist
+            songf["albumartist"] = self.artist if self.album == self.artist else "Various Artists"
             
             songf.save()
         except Exception as e:
