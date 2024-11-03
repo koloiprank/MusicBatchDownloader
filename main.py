@@ -109,12 +109,7 @@ class Song():
                     'sleep_interval': 20,
                     'max_sleep_interval':35
                 }
-            if "open.spotify" in self.title:
-                track = get_spotify_info(self.title)
-                info = YoutubeSearch(track, max_results=1).to_dict()[0]
-                with YoutubeDL(options) as ydl:
-                    ydl.extract_info(f"https://youtube.com{info["url_suffix"]}")
-            elif "youtube.com" in self.title or "youtu.be" in self.title:
+            if "youtube.com" in self.title or "youtu.be" in self.title:
                 with YoutubeDL(options) as ydl:
                     info = ydl.extract_info(self.title)
             else:
@@ -374,16 +369,16 @@ def assign_songs(lines:list[str], structure:list[str]) -> dict[str:Song]:
         
         # Assign song
         if "S" in structure[idx]:
-            # Playlist append
-            if "https" in lines[idx] and "playlist" in lines[idx]:
+            # Spotify / Playlist append
+            if "https://" in lines[idx] or "http://" in lines[idx]:
                 # Spotify
                 if "open.spotify" in lines[idx]:
                     playlist_songs = get_spotify_info(query=lines[idx])
                     
                     for song in playlist_songs:
-                        toappend[song] = Song(title=song, album=album, folder=folder, cover=cover)
+                        toappend[song] = Song(title=song, album=album, folder=folder, cover=cover)  
                 # Youtube
-                elif "youtu.be" in lines[idx] or "youtube.com" in lines[idx]:
+                elif ("youtu.be" in lines[idx] or "youtube.com" in lines[idx]) and "playlist" in lines[idx]:
                     playlist = Playlist(song)
                     playlist._video_regex = re.compile(r"\"url\":\"(/watch\?v=[\w-]*)") # Youtube changed regex of video links
                     playlist_urls = playlist.video_urls
@@ -391,15 +386,16 @@ def assign_songs(lines:list[str], structure:list[str]) -> dict[str:Song]:
                     if playlist_urls:
                         for url in playlist_urls:
                             toappend[url] = Song(title=url, album=album, folder=folder, cover=cover)
+            # Normal YT link / song name
             else:
                 songs[lines[idx]] = Song(title=lines[idx], album=album, folder=folder, cover=cover)
     # Return
-    if toappend != {}:
+    if toappend:
         songs = songs | toappend
     return songs
 
 # Song download process
-def download_song(song_tuple:str) -> None:
+def download_process(song_tuple:str) -> None:
     # Main vars
     song = song_tuple[0]
     songs_dict = song_tuple[1]
@@ -441,7 +437,7 @@ def main():
     #Download songs with pool
     songs = [(song, songs_dict) for song in songs_dict]
     with Pool() as pool:
-        pool.map(download_song, songs)
+        pool.map(download_process, songs)
         
 if __name__=="__main__":
     main()
