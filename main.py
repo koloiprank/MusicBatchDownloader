@@ -430,11 +430,15 @@ def main():
             print("File not found. Make sure your Local Filename / Path is correct.")
     
     # Create structure
+    print("[+][LINES] READING LINES...")
     lines = read_lines(filepath)
+    print("[+][STRUCTURE] ASSEMBLING STRUCTURE...")
     structure = assemble_structure(lines)
+    print("[+][SONGS] ASSIGNING SONGS...")
     songs_dict = assign_songs(lines=lines, structure=structure)
     
     #Download songs with pool
+    print("[+][DOWNLOAD] STARTING DOWNLOAD PROCESS...")
     songs = [(song, songs_dict) for song in songs_dict]
     with Pool() as pool:
         pool.map(download_process, songs)
