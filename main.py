@@ -282,7 +282,7 @@ class Song():
             songf["title"] = self.title
             songf["artist"] = self.artist
             songf["album"] = self.album
-            songf["albumartist"] = self.artist if self.album == self.artist else "Various Artists"
+            songf["albumartist"] = self.artist if self.album == self.title else "Various Artists"
             
             songf.save()
         except Exception as e:
