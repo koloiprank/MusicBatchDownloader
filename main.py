@@ -40,7 +40,7 @@ if CLIENT_ID and CLIENT_SECRET:
     def get_spotify_info(query : str) -> str | list[str]:
         if "track" in query:
             uri = get_spotify_uri(query)
-            return f"{SP.track(uri)['name']} {SP.track(uri)['artists'][0]['name']}"
+            return [f"{SP.track(uri)['name']} {SP.track(uri)['artists'][0]['name']}"]
         
         elif "playlist" in query:
             uri = get_spotify_uri(query)
