@@ -35,16 +35,16 @@ if CLIENT_ID and CLIENT_SECRET:
     )
     SP = spotipy.Spotify(client_credentials_manager=CLIENT_CREDENTIALS_MANAGER)
     
-    def get_spotify_uri(link : str) -> str:
+    def get_spotify_uri(link : str) -> list:
         return link.split("/")[-1].split("?")[0]
     def get_spotify_info(query : str) -> str | list[str]:
         if "track" in query:
             uri = get_spotify_uri(query)
-            return [f"{SP.track(uri)['name']} {SP.track(uri)['artists'][0]['name']}"]
+            return [f"{SP.track(uri)['name']} {' '.join([artist['name'] for artist in SP.track(uri)['artists']])}"]
         
         elif "playlist" in query:
             uri = get_spotify_uri(query)
-            return [f"{song['track']['name']} {song['track']['artists'][0]['name']}" for song in SP.playlist_tracks(uri)["items"]]
+            return [f"{song['track']['name']} {' '.join([artist['name'] for artist in SP.track(uri)['artists']])}" for song in SP.playlist_tracks(uri)["items"]]
 
 
 
@@ -386,12 +386,16 @@ def assign_songs(lines:list[str], structure:list[str]) -> dict[str:Song]:
                     if playlist_urls:
                         for url in playlist_urls:
                             toappend[url] = Song(title=url, album=album, folder=folder, cover=cover)
+                # Any other supported links remain original
+                else:
+                    songs[lines[idx]] = Song(title=lines[idx], album=album, folder=folder, cover=cover)
             # Normal YT link / song name
             else:
                 songs[lines[idx]] = Song(title=lines[idx], album=album, folder=folder, cover=cover)
     # Return
     if toappend:
         songs = songs | toappend
+    print(songs)
     return songs
 
 # Song download process
