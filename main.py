@@ -107,7 +107,7 @@ class Song():
                     'filter': 'audioonly',
                     'outtmpl': f'{self.path}{self.filename}.%(ext)s',
                     'sleep_interval': 20,
-                    'max_sleep_interval':35
+                    'max_sleep_interval': 35
                 }
             if "youtube.com" in self.title or "youtu.be" in self.title:
                 with YoutubeDL(options) as ydl:
@@ -126,7 +126,7 @@ class Song():
             self.title = info["title"]
             self.artist = info["channel"]
             self.album = self.album or info["title"]
-            self.cover = self.cover or (info["thumbnails"][0] if "thumbnails" in info else info["thumbnail"])
+            self.cover = self.cover or (info["thumbnails"][0]["url"] if "thumbnails" in info else info["thumbnail"])
             self.ext = get_fileext_fromname(self.path, self.filename)[1].replace(".", "")
         except Exception as e:
             print(f"[-][DOWNLOAD-MTD] [{self.title}] failed metadata addition\n#EXCEPTION: {e}")
@@ -395,7 +395,6 @@ def assign_songs(lines:list[str], structure:list[str]) -> dict[str:Song]:
     # Return
     if toappend:
         songs = songs | toappend
-    print(songs)
     return songs
 
 # Song download process
