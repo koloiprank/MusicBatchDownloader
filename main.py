@@ -37,19 +37,33 @@ if CLIENT_ID and CLIENT_SECRET:
     
     def get_spotify_uri(link : str) -> list:
         return link.split("/")[-1].split("?")[0]
-    def get_spotify_info(query : str) -> str | list[str]:
+    def get_spotify_info(query : str) -> list[str]:
         if "track" in query:
             uri = get_spotify_uri(query)
-            return [f"{SP.track(uri)['name']} {' '.join([artist['name'] for artist in SP.track(uri)['artists']])}"]
+            track = SP.track(uri)
+            return [f"{track['name']} {' '.join([artist['name'] for artist in track['artists']])}",
+                    track["album"]["images"][0]["url"],
+                    ' '.join([artist['name'] for artist in track['artists']]),
+                    track["album"]["name"]
+                    ]
         
         elif "playlist" in query:
             uri = get_spotify_uri(query)
-            return [f"{song['track']['name']} {' '.join([artist['name'] for artist in SP.track(uri)['artists']])}" for song in SP.playlist_tracks(uri)["items"]]
+            toreturn = []
+            for song in SP.playlist_tracks(uri)["items"]:
+                track = SP.track(song["track"]["external_urls"]["spotify"])
+                toreturn.append([
+                                f"{track['name']} {' '.join([artist['name'] for artist in track['artists']])}",
+                                track["album"]["images"][0]["url"],
+                                ' '.join([artist['name'] for artist in track['artists']]),
+                                track["album"]["name"]
+                                ])
+            return toreturn
 
 
 
 #------======SONG CLASS======------#
-# Class Utils
+# Utils
 def format_filename(filename:str) -> str:
     for char in " \\|?:/><'\"*.":
         filename = filename.replace(char, "_")
@@ -124,7 +138,7 @@ class Song():
             print(f"[+][DOWNLOAD-MTD] Setting metadata for [{self.title}][{self.filename}]")
             
             self.title = info["title"]
-            self.artist = info["channel"]
+            self.artist = self.artist or info["channel"]
             self.album = self.album or info["title"]
             self.cover = self.cover or ( (info["thumbnails"][0]["url"] if type(info["thumbnails"][0]) is dict else info["thumbnails"][0]) if "thumbnails" in info else info["thumbnail"])
             self.ext = get_fileext_fromname(self.path, self.filename)[1].replace(".", "")
@@ -373,10 +387,14 @@ def assign_songs(lines:list[str], structure:list[str]) -> dict[str:Song]:
             if "https://" in lines[idx] or "http://" in lines[idx]:
                 # Spotify
                 if "open.spotify" in lines[idx]:
-                    playlist_songs = get_spotify_info(query=lines[idx])
+                    song_list = get_spotify_info(query=lines[idx])
                     
-                    for song in playlist_songs:
-                        toappend[song] = Song(title=song, album=album, folder=folder, cover=cover)  
+                    if "playlist" in lines[idx]:
+                        for song in song_list:
+                            toappend[song[0]] = Song(title=song[0], cover=cover or song[1], artist=song[2], album=album or song[3], folder=folder) 
+                    elif "track" in lines[idx]:
+                        song = song_list
+                        toappend[song[0]] = Song(title=song[0], cover=cover or song[1], artist=song[2], album=album or song[3], folder=folder)
                 # Youtube
                 elif ("youtu.be" in lines[idx] or "youtube.com" in lines[idx]) and "playlist" in lines[idx]:
                     playlist = Playlist(song)
